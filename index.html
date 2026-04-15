@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schüler-Cockpit: Agency & Resilienz</title>
+    <style>
+        :root {
+            --bg: #f4f7f6; --panel: #ffffff; --text: #2c3e50;
+            --good: #27ae60; --warn: #f39c12; --alert: #c0392b; --info: #2980b9; --mental: #8e44ad; --agency: #d35400;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        h1 { font-size: 24px; color: var(--info); border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 20px; text-align: center;}
+        
+        .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1100px; margin: 0 auto; }
+        
+        .card { background: var(--panel); padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-top: 5px solid var(--info); display: flex; flex-direction: column; justify-content: space-between;}
+        .card-title { font-size: 12px; text-transform: uppercase; color: #7f8c8d; font-weight: bold; margin-bottom: 5px; display: flex; align-items: center; gap: 8px;}
+        .card-value { font-size: 32px; font-weight: 900; margin: 10px 0;}
+        .card-desc { font-size: 12px; color: #95a5a6; }
+        
+        .c-water { border-color: var(--info); }
+        .c-air { border-color: var(--good); }
+        .c-vax { border-color: var(--agency); } /* Neue Farbe für Immunität/Agency */
+        .c-supply { border-color: var(--warn); }
+        .c-mental { border-color: var(--mental); }
+        .c-heat { border-color: var(--alert); }
+        
+        .progress-bar { width: 100%; height: 8px; background: #ecf0f1; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .progress-fill { height: 100%; transition: 0.5s; }
+
+        .heatmap-container { margin-top: 10px; }
+        .heat-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; font-weight: bold;}
+        .heat-label { width: 80px; color: #7f8c8d; }
+        .heat-track { flex-grow: 1; background: #ecf0f1; height: 12px; border-radius: 6px; overflow: hidden; margin: 0 10px; }
+        .heat-fill { height: 100%; transition: 0.5s; }
+        .heat-num { width: 40px; text-align: right; }
+
+        .controls { grid-column: span 3; background: white; padding: 20px; border-radius: 12px; margin-top: 10px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);}
+        .controls-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end;}
+        button { border: none; padding: 12px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; color: white;}
+        
+        .btn-sim { background: var(--info); font-size: 16px; padding: 12px 24px;}
+        .btn-sim:hover { background: #21618c; transform: translateY(-2px); }
+        
+        .btn-topdown { background: #34495e; border-left: 4px solid var(--warn); }
+        .btn-topdown:hover { background: #2c3e50; transform: translateY(-2px); }
+        
+        .btn-bottomup { background: #34495e; border-left: 4px solid var(--agency); }
+        .btn-bottomup:hover { background: #2c3e50; transform: translateY(-2px); }
+
+        .log-box { font-size: 12px; color: #7f8c8d; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; width: 100%; box-sizing: border-box; font-family: monospace;}
+    </style>
+</head>
+<body>
+
+    <div style="max-width: 1100px; margin: 0 auto;">
+        <h1>🏫 Ganzheitliches Resilienz-Cockpit (Woche <span id="week-counter">1</span>)</h1>
+
+        <div class="dashboard-grid">
+            
+            <div class="card c-water">
+                <div class="card-title">🔬 Abwasser-Labor (Virenlast)</div>
+                <div class="card-value" id="val-water">Niedrig</div>
+                <div class="card-desc">Frühindikator. Schlägt Alarm, bevor jemand Symptome hat.</div>
+            </div>
+
+            <div class="card c-air">
+                <div class="card-title">💨 Luftqualität & Aerosole</div>
+                <div class="card-value" id="val-air">Optimal</div>
+                <div class="progress-bar"><div id="bar-air" class="progress-fill" style="width: 20%; background: var(--good);"></div></div>
+                <div class="card-desc">Abhängig von Lüftungs-Disziplin und RLT-Anlagen.</div>
+            </div>
+
+            <div class="card c-vax">
+                <div class="card-title">🛡️ Immunitäts-Level (Agency)</div>
+                <div class="card-value" id="val-vax">60%</div>
+                <div class="progress-bar"><div id="bar-vax" class="progress-fill" style="width: 60%; background: var(--warn);"></div></div>
+                <div class="card-desc">Schutz durch Impfungen. Sinkt langsam, kann durch Kampagnen erhöht werden.</div>
+            </div>
+
+            <div class="card c-supply">
+                <div class="card-title">📦 Material-Reserven</div>
+                <div class="card-value" id="val-supply">5 Wochen</div>
+                <div class="progress-bar"><div id="bar-supply" class="progress-fill" style="width: 50%; background: var(--good);"></div></div>
+                <div class="card-desc">Vorrat an Masken & Tests (Preparedness).</div>
+            </div>
+
+            <div class="card c-mental">
+                <div class="card-title">🛋️ Psychosoziale Belastung</div>
+                <div class="card-value" id="val-mental">Normal</div>
+                <div class="progress-bar"><div id="bar-mental" class="progress-fill" style="width: 20%; background: var(--mental);"></div></div>
+                <div class="card-desc">Stress durch Ausfälle. Wird durch "Buddy-Systeme" gepuffert.</div>
+            </div>
+
+            <div class="card c-heat">
+                <div class="card-title">🔥 Krankenstand (Heatmap)</div>
+                <div class="heatmap-container" id="heatmap"></div>
+                <div class="card-desc" style="margin-top: 10px;">Gleichzeitig gemeldete Ausfälle.</div>
+            </div>
+
+        </div>
+
+        <div class="controls">
+            <div class="controls-header">
+                <div style="font-size: 13px; color: #7f8c8d; max-width: 400px; line-height: 1.4;">
+                    <b>System-Steuerung:</b> Simuliere den Verlauf. Greife entweder zentral als Schulleitung ein oder mobilisiere die Selbstwirksamkeit der Schüler (SMV).
+                </div>
+                <div class="btn-group">
+                    <button class="btn-topdown" onclick="actionManagement()">🧑‍🏫 Schulleitung (Nachschub)</button>
+                    <button class="btn-bottomup" onclick="actionStudents()">🤝 SMV & Schüler-Initiative</button>
+                    <button class="btn-sim" onclick="advanceWeek()">Woche simulieren ⏭️</button>
+                </div>
+            </div>
+            <div class="log-box" id="action-log">System gestartet. Beobachte die Entwicklung...</div>
+        </div>
+    </div>
+
+    <script>
+        let week = 1;
+        let viralLoad = 10; 
+        let airQuality = 20; 
+        let immunity = 60; // Startet tiefer, damit Schüler was tun können
+        let supply = 100; 
+        let stressLevel = 20; 
+        
+        let cohorts = [
+            { name: "Klasse 5-7", sick: 2 },
+            { name: "Klasse 8-10", sick: 3 },
+            { name: "Oberstufe", sick: 1 },
+            { name: "Lehrkräfte", sick: 4 }
+        ];
+
+        function logAction(text) {
+            document.getElementById('action-log').innerText = `[Woche ${week}] ` + text;
+        }
+
+        function renderDashboard() {
+            document.getElementById('week-counter').innerText = week;
+
+            // 1. Abwasser
+            let waterText = "Niedrig"; let waterColor = "var(--good)";
+            if(viralLoad > 40) { waterText = "Steigend"; waterColor = "var(--warn)"; }
+            if(viralLoad > 75) { waterText = "Kritisch!"; waterColor = "var(--alert)"; }
+            document.getElementById('val-water').innerText = waterText;
+            document.getElementById('val-water').style.color = waterColor;
+
+            // 2. Luft
+            let airText = "Optimal"; let airColor = "var(--good)";
+            if(airQuality > 50) { airText = "Erhöht"; airColor = "var(--warn)"; }
+            if(airQuality > 80) { airText = "Lüften!"; airColor = "var(--alert)"; }
+            document.getElementById('val-air').innerText = airText;
+            document.getElementById('bar-air').style.width = Math.min(airQuality, 100) + "%";
+            document.getElementById('bar-air').style.background = airColor;
+
+            // 3. Immunität (NEU: Dynamisch)
+            let vaxColor = immunity > 75 ? "var(--good)" : (immunity > 50 ? "var(--warn)" : "var(--alert)");
+            document.getElementById('val-vax').innerText = Math.round(immunity) + "%";
+            document.getElementById('bar-vax').style.width = Math.min(immunity, 100) + "%";
+            document.getElementById('bar-vax').style.background = vaxColor;
+
+            // 4. Reserven
+            let weeksLeft = Math.round(supply / 20); 
+            let supplyColor = supply > 40 ? "var(--good)" : (supply > 20 ? "var(--warn)" : "var(--alert)");
+            document.getElementById('val-supply').innerText = Math.max(0, weeksLeft) + " Wochen";
+            document.getElementById('bar-supply').style.width = Math.max(0, supply) + "%";
+            document.getElementById('bar-supply').style.background = supplyColor;
+
+            // 5. Mental Health
+            let mentalText = "Normal";
+            if(stressLevel > 60) mentalText = "Stark genutzt";
+            if(stressLevel > 85) mentalText = "Überlastet!";
+            document.getElementById('val-mental').innerText = mentalText;
+            document.getElementById('bar-mental').style.width = Math.min(stressLevel, 100) + "%";
+            document.getElementById('bar-mental').style.background = stressLevel > 85 ? "var(--alert)" : "var(--mental)";
+
+            // 6. Heatmap
+            const map = document.getElementById('heatmap');
+            map.innerHTML = '';
+            cohorts.forEach(c => {
+                let heatColor = "var(--good)";
+                if(c.sick > 10) heatColor = "var(--warn)";
+                if(c.sick > 25) heatColor = "var(--alert)";
+                let pct = Math.min(c.sick, 100);
+
+                let row = document.createElement('div');
+                row.className = 'heat-row';
+                row.innerHTML = `
+                    <div class="heat-label">${c.name}</div>
+                    <div class="heat-track"><div class="heat-fill" style="width: ${pct}%; background: ${heatColor};"></div></div>
+                    <div class="heat-num" style="color: ${heatColor};">${Math.round(c.sick)}%</div>
+                `;
+                map.appendChild(row);
+            });
+        }
+
+        function advanceWeek() {
+            week++;
+            
+            // Waning Immunity (Immunität sinkt langsam über die Zeit)
+            immunity = Math.max(20, immunity - 1.5);
+
+            // Natürliche Genesung
+            cohorts.forEach(c => c.sick = Math.max(0, c.sick * 0.6));
+            stressLevel = Math.max(20, stressLevel - 10);
+
+            let previousViralLoad = viralLoad;
+            
+            // Abwasser schwankt, abhängig vom Immunitätslevel!
+            let immunityProtection = (immunity / 100); 
+            viralLoad += (Math.random() * 40 * (1 - immunityProtection)) - 5; 
+            
+            if(viralLoad > 100) viralLoad = 100;
+            if(viralLoad < 5) viralLoad = 5;
+            
+            if(previousViralLoad > 40) {
+                // Infektionen schlagen durch, gedämpft durch Immunität
+                let infectionSpike = (Math.random() * 15) * (1 - immunityProtection);
+                cohorts.forEach(c => c.sick += infectionSpike);
+                
+                airQuality += 15; 
+                supply -= 20; 
+                stressLevel += 15; 
+            } else {
+                cohorts.forEach(c => c.sick += Math.random() * 3);
+                airQuality = Math.max(20, airQuality - 10); 
+                supply -= 5; 
+            }
+
+            if(supply <= 0) {
+                cohorts.forEach(c => c.sick += 8);
+                stressLevel += 20; 
+                supply = 0;
+            }
+            
+            cohorts.forEach(c => { if(c.sick > 60) c.sick = 60; });
+            if(airQuality > 100) airQuality = 100;
+            if(stressLevel > 100) stressLevel = 100;
+
+            logAction("Eine reguläre Schulwoche ist vergangen. Natürliche Dynamik läuft.");
+            renderDashboard();
+        }
+
+        // AKTION A: Top-Down (Verhältnisse)
+        function actionManagement() {
+            supply = 100; // Masken bestellt
+            viralLoad = Math.max(10, viralLoad - 30); // Strenge Maskenpflicht
+            
+            logAction("Schulleitung greift ein: Neue Masken verteilt, strikte Verordnungen erlassen. Virenlast sinkt, aber Stress bleibt.");
+            renderDashboard();
+        }
+
+        // AKTION B: Bottom-Up (Verhalten & Agency)
+        function actionStudents() {
+            // Peers überzeugen Peers
+            immunity = Math.min(100, immunity + 20); 
+            // Buddy-Systeme puffern Stress massiv ab
+            stressLevel = Math.max(10, stressLevel - 40);
+            // Hygiene-Scouts regeln das Lüften dezentral
+            airQuality = Math.max(10, airQuality - 30);
+            
+            logAction("SMV aktiv! Peer-to-Peer Impfkampagne greift (+Immunität). Lerngruppen und Buddys fangen psychosozialen Stress massiv ab.");
+            renderDashboard();
+        }
+
+        renderDashboard();
+    </script>
+</body>
+</html>
